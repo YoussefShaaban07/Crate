@@ -2,6 +2,13 @@ import csv
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 
+# --- Scoring weights (the Algorithm Recipe) ---
+# Tweak these to run experiments; score_song() reads them directly.
+GENRE_WEIGHT = 2.0     # points for an exact genre match
+MOOD_WEIGHT = 1.0      # points for an exact mood match
+ENERGY_WEIGHT = 2.0    # max points for a perfect energy match (scaled by closeness)
+ACOUSTIC_WEIGHT = 1.0  # max points for the acoustic preference
+
 @dataclass
 class Song:
     """
@@ -94,33 +101,33 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     score = 0.0
     reasons: List[str] = []
 
-    # --- Genre match (+2.0) ---
+    # --- Genre match ---
     if song.get("genre") == user_prefs.get("favorite_genre"):
-        score += 2.0
-        reasons.append(f"genre match: {song['genre']} (+2.0)")
+        score += GENRE_WEIGHT
+        reasons.append(f"genre match: {song['genre']} (+{GENRE_WEIGHT:.1f})")
 
-    # --- Mood match (+1.0) ---
+    # --- Mood match ---
     if song.get("mood") == user_prefs.get("favorite_mood"):
-        score += 1.0
-        reasons.append(f"mood match: {song['mood']} (+1.0)")
+        score += MOOD_WEIGHT
+        reasons.append(f"mood match: {song['mood']} (+{MOOD_WEIGHT:.1f})")
 
-    # --- Energy closeness (0 -> +2.0) ---
+    # --- Energy closeness (scaled 0 -> ENERGY_WEIGHT) ---
     target_energy = user_prefs.get("target_energy")
     if target_energy is not None:
         closeness = 1.0 - abs(song["energy"] - target_energy)
-        energy_points = 2.0 * closeness
+        energy_points = ENERGY_WEIGHT * closeness
         score += energy_points
         reasons.append(
             f"energy {song['energy']:.2f} vs target {target_energy:.2f} "
             f"(+{energy_points:.2f})"
         )
 
-    # --- Acoustic preference (0 -> +1.0) ---
+    # --- Acoustic preference (0 -> ACOUSTIC_WEIGHT) ---
     if user_prefs.get("likes_acoustic"):
-        acoustic_points = song["acousticness"]
+        acoustic_points = ACOUSTIC_WEIGHT * song["acousticness"]
         reasons.append(f"acoustic, user likes acoustic (+{acoustic_points:.2f})")
     else:
-        acoustic_points = 1.0 - song["acousticness"]
+        acoustic_points = ACOUSTIC_WEIGHT * (1.0 - song["acousticness"])
         reasons.append(f"non-acoustic, user prefers non-acoustic (+{acoustic_points:.2f})")
     score += acoustic_points
 
