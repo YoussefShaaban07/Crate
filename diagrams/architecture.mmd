@@ -1,0 +1,117 @@
+%% VibeScope 2.0 - retrieval-augmented music recommender
+%% System architecture: components, data flow, and verification points.
+%% Render at https://mermaid.live, or with the Mermaid VS Code extension.
+%%
+%% Legend
+%%   purple = AI / LLM component          green  = retrieval (RAG) component
+%%   orange = automated check on AI output   blue = testing    yellow = human
+%%   solid arrow = data flow              dashed arrow = checks, logs, feedback
+
+flowchart TD
+
+    %% ================= INPUT =================
+    subgraph IN["INPUT"]
+        Q["Free-text request<br/>'calm instrumental music<br/>for a long study session'"]
+        CSV[("data/songs.csv<br/>18 songs x 9 features")]
+        KB[("data/knowledge/notes.jsonl<br/>31 documents:<br/>18 song reviews<br/>7 situation notes<br/>6 feature glossaries")]
+    end
+
+    %% ================= PROCESS =================
+    subgraph PROC["PROCESS - src/pipeline.py orchestrates 6 stages"]
+
+        R["STAGE 1 RETRIEVER - src/retrieval.py<br/>BM25 index, stemmed and deterministic<br/>returns the top 8 documents"]
+
+        P["STAGE 2 PARSER - src/llm.py<br/>Claude: request + retrieved docs<br/>to a structured taste profile"]
+        CP{"profile schema<br/>valid?"}
+        FP["offline keyword parser"]
+
+        S["STAGE 3 SCORER - src/recommender.py<br/>rule scoring over all 18 songs<br/>genre 2.0 / mood 1.0 / energy 2.0 / acoustic 1.0<br/>shortlists 8 candidates"]
+
+        B["STAGE 4 BLENDER - src/pipeline.py<br/>evidence = BM25 of request vs that song's own notes<br/>blended = rule + 2.5 x normalised evidence<br/>RETRIEVAL REORDERS THE SHORTLIST HERE"]
+
+        K["STAGE 5 RE-RANKER - src/llm.py<br/>Claude: candidates + retrieved docs<br/>to final order, rationale, cited doc_ids"]
+
+        subgraph GUARD["STAGE 6 GUARDRAILS - src/guardrails.py - checks every AI output"]
+            CK{"ranking schema<br/>valid?"}
+            FK["offline blended re-ranker"]
+            C2["drop songs outside<br/>the candidate pool"]
+            C3["strip citations to documents<br/>that were never retrieved"]
+            C4["top up to k if the model<br/>returned too few"]
+        end
+    end
+
+    %% ================= OUTPUT =================
+    subgraph OUTG["OUTPUT"]
+        OUT["Ranked recommendations - each with<br/>rule score, evidence score, rationale,<br/>and the doc_ids that justify it"]
+    end
+
+    %% ================= TESTING + HUMAN =================
+    subgraph VER["TESTING AND HUMAN OVERSIGHT - run before shipping a change"]
+        T1["pytest - 66 tests<br/>a fake LLM injects hallucinated songs and<br/>citations to prove the guardrails fire"]
+        T2["src/evaluation.py<br/>9 golden cases from eval/cases.json<br/>x3 repeats each"]
+        T3["7 gated metrics: recall@k, profile accuracy,<br/>schema validity, groundedness, top-1 consistency,<br/>top-k Jaccard, guardrail error rate"]
+        T4{"all gates above<br/>threshold?"}
+        T5["eval/report.json<br/>exit 0 - safe to ship"]
+        T6["exit 1 - change is blocked"]
+        H1(["HUMAN authored the knowledge base,<br/>the 9 golden cases and the thresholds"])
+        H2(["HUMAN reads the failed metric and the log,<br/>then fixes the root cause - not the threshold"])
+    end
+
+    LOG[("logs/vibescope.log<br/>every retrieval, model call, retry,<br/>guardrail rejection and fallback")]
+
+    %% ================= DATA FLOW =================
+    Q --> R
+    KB --> R
+    Q --> P
+    R -- "top 8 docs" --> P
+
+    P --> CP
+    CP -- "no" --> FP
+    CP -- "yes" --> S
+    FP --> S
+
+    CSV --> S
+    S -- "8 candidates" --> B
+    R -. "per-song notes" .-> B
+    B --> K
+    R -- "retrieved docs as context" --> K
+
+    K --> CK
+    CK -- "no" --> FK
+    CK -- "yes" --> C2
+    FK --> C2
+    C2 --> C3 --> C4 --> OUT
+
+    %% ================= VERIFICATION FLOW =================
+    OUT -.-> T1
+    OUT -.-> T2
+    T2 --> T3 --> T4
+    T4 -- "yes" --> T5
+    T4 -- "no" --> T6
+    T6 -.-> H2
+    T1 -. "test failure" .-> H2
+    H1 -.-> KB
+    H1 -.-> T2
+    H2 -. "fix code, data or weights" .-> PROC
+
+    %% ================= OBSERVABILITY =================
+    R -.-> LOG
+    P -.-> LOG
+    K -.-> LOG
+    GUARD -.-> LOG
+    LOG -.-> H2
+
+    %% ================= STYLING =================
+    classDef ai fill:#e8dcff,stroke:#6b4fbb,color:#2b1a4d
+    classDef rag fill:#d8f0e4,stroke:#2f8f63,color:#123b28
+    classDef guardstyle fill:#ffe4d6,stroke:#c25a2b,color:#4d1f0c
+    classDef test fill:#e6eef7,stroke:#3f6d99,color:#132a40
+    classDef human fill:#fff4c2,stroke:#a8871f,color:#3d3005
+    classDef data fill:#f2f2f2,stroke:#888888,color:#222222
+
+    class P,K ai
+    class R,B rag
+    class CP,FP,CK,FK,C2,C3,C4 guardstyle
+    class T1,T2,T3,T4,T5,T6 test
+    class H1,H2 human
+    class CSV,KB,LOG,Q,OUT data
