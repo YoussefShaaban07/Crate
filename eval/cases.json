@@ -1,0 +1,108 @@
+{
+  "description": "Golden cases for the VibeScope reliability harness. `gold_docs` are the knowledge-base documents a correct retrieval should surface. `gold_profile` fields may be null to skip scoring that field (used for deliberately ambiguous cases). `acceptable_top1` may be null when no single answer is defensible.",
+  "cases": [
+    {
+      "id": "study-instrumental",
+      "query": "I need something for a long late-night study session, instrumental and calm",
+      "gold_docs": ["usecase-study-focus", "rev-focus-flow", "rev-midnight-coding", "rev-library-rain"],
+      "gold_profile": {
+        "favorite_genre": "lofi",
+        "favorite_mood": "focused",
+        "target_energy": [0.2, 0.5],
+        "likes_acoustic": true
+      },
+      "acceptable_top1": [9, 4, 2]
+    },
+    {
+      "id": "gym-high-energy",
+      "query": "high energy music for the gym, nothing acoustic",
+      "gold_docs": ["usecase-workout", "rev-gym-hero", "rev-pulse-machine", "rev-iron-verdict", "rev-storm-runner"],
+      "gold_profile": {
+        "favorite_genre": "edm",
+        "favorite_mood": "energetic",
+        "target_energy": [0.7, 1.0],
+        "likes_acoustic": false
+      },
+      "acceptable_top1": [13, 5, 15, 3]
+    },
+    {
+      "id": "night-drive",
+      "query": "something moody and cinematic for driving at night",
+      "gold_docs": ["usecase-late-night-drive", "rev-night-drive-loop"],
+      "gold_profile": {
+        "favorite_genre": "synthwave",
+        "favorite_mood": "moody",
+        "target_energy": [0.55, 0.85],
+        "likes_acoustic": false
+      },
+      "acceptable_top1": [8]
+    },
+    {
+      "id": "heartbreak",
+      "query": "I just went through a breakup and want something sad and quiet",
+      "gold_docs": ["usecase-heartbreak", "rev-winter-elegy"],
+      "gold_profile": {
+        "favorite_genre": "classical",
+        "favorite_mood": "melancholy",
+        "target_energy": [0.2, 0.45],
+        "likes_acoustic": true
+      },
+      "acceptable_top1": [12, 18]
+    },
+    {
+      "id": "party",
+      "query": "upbeat party music people can dance to",
+      "gold_docs": ["usecase-party", "rev-pulse-machine", "rev-concrete-kingdom", "rev-sunrise-city"],
+      "gold_profile": {
+        "favorite_genre": "pop",
+        "favorite_mood": "happy",
+        "target_energy": [0.7, 1.0],
+        "likes_acoustic": false
+      },
+      "acceptable_top1": [13, 11, 1, 5]
+    },
+    {
+      "id": "rainy-acoustic",
+      "query": "quiet acoustic folk for a rainy afternoon",
+      "gold_docs": ["usecase-rainy-day", "rev-paper-boats", "rev-library-rain", "rev-coffee-shop-stories"],
+      "gold_profile": {
+        "favorite_genre": "folk",
+        "favorite_mood": "chill",
+        "target_energy": [0.2, 0.45],
+        "likes_acoustic": true
+      },
+      "acceptable_top1": [18, 4]
+    },
+    {
+      "id": "coffee-shop-reading",
+      "query": "background music for reading in a coffee shop",
+      "gold_docs": ["rev-coffee-shop-stories", "usecase-study-focus"],
+      "gold_profile": {
+        "favorite_genre": "jazz",
+        "favorite_mood": "relaxed",
+        "target_energy": [0.25, 0.5],
+        "likes_acoustic": true
+      },
+      "acceptable_top1": [7]
+    },
+    {
+      "id": "adversarial-conflict",
+      "query": "I want something really intense but also melancholy and slow",
+      "gold_docs": ["rev-winter-elegy", "usecase-heartbreak", "gloss-energy", "gloss-valence"],
+      "gold_profile": {
+        "favorite_genre": null,
+        "favorite_mood": "melancholy",
+        "target_energy": [0.3, 0.8],
+        "likes_acoustic": null
+      },
+      "acceptable_top1": null
+    },
+    {
+      "id": "edge-out-of-catalog",
+      "query": "polka accordion music for a moon landing",
+      "gold_docs": [],
+      "gold_profile": null,
+      "acceptable_top1": null
+    }
+  ]
+}
