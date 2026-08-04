@@ -1,20 +1,49 @@
-import csv
-from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
+"""
+The rule-based first pass: transparent feature scoring over the song catalog.
 
-# --- Scoring weights (the Algorithm Recipe) ---
-# Tweak these to run experiments; score_song() reads them directly.
-GENRE_WEIGHT = 2.0     # points for an exact genre match
-MOOD_WEIGHT = 1.0      # points for an exact mood match
-ENERGY_WEIGHT = 2.0    # max points for a perfect energy match (scaled by closeness)
-ACOUSTIC_WEIGHT = 1.0  # max points for the acoustic preference
+This module has no knowledge of retrieval or of the language model. It answers
+one question — "how well do this song's numbers match this profile's numbers?" —
+and hands a shortlist to `src.pipeline`, which then re-ranks that shortlist
+using retrieved evidence.
+
+Keeping the two stages separate is deliberate: the rule score stays auditable,
+and the evaluation harness can measure how far retrieval moved the ranking.
+"""
+
+from __future__ import annotations
+
+import csv
+from dataclasses import asdict, dataclass
+from typing import Dict, List, Optional, Tuple
+
+from src.config import (
+    ACOUSTIC_WEIGHT,
+    ENERGY_WEIGHT,
+    GENRE_WEIGHT,
+    MAX_RULE_SCORE,
+    MOOD_WEIGHT,
+    SONGS_CSV,
+)
+from src.logging_setup import get_logger
+
+log = get_logger("recommender")
+
+INT_FIELDS = frozenset({"id", "tempo_bpm"})
+FLOAT_FIELDS = frozenset({"energy", "valence", "danceability", "acousticness"})
+REQUIRED_FIELDS = frozenset(
+    {"id", "title", "artist", "genre", "mood", "energy", "tempo_bpm",
+     "valence", "danceability", "acousticness"}
+)
+
+
+class CatalogError(RuntimeError):
+    """Raised when the song catalog is missing or unusable."""
+
 
 @dataclass
 class Song:
-    """
-    Represents a song and its attributes.
-    Required by tests/test_recommender.py
-    """
+    """One track and its attributes."""
+
     id: int
     title: str
     artist: str
@@ -26,103 +55,104 @@ class Song:
     danceability: float
     acousticness: float
 
+    def to_dict(self) -> Dict:
+        return asdict(self)
+
+
 @dataclass
 class UserProfile:
-    """
-    Represents a user's taste preferences.
-    Required by tests/test_recommender.py
-    """
+    """A listener's taste preferences, as the scorer consumes them."""
+
     favorite_genre: str
     favorite_mood: str
     target_energy: float
     likes_acoustic: bool
 
-class Recommender:
+    def to_dict(self) -> Dict:
+        return asdict(self)
+
+
+def load_songs(csv_path: str | None = None) -> List[Dict]:
     """
-    OOP implementation of the recommendation logic.
-    Required by tests/test_recommender.py
+    Load the catalog as a list of dicts, with numeric columns converted.
+
+    Rows missing a column or carrying an unparseable number are logged and
+    skipped; an empty or absent catalog is a hard error.
     """
-    def __init__(self, songs: List[Song]):
-        self.songs = songs
+    path = str(csv_path) if csv_path is not None else str(SONGS_CSV)
 
-    def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        # TODO: Implement recommendation logic
-        return self.songs[:k]
-
-    def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        # TODO: Implement explanation logic
-        return "Explanation placeholder"
-
-def load_songs(csv_path: str) -> List[Dict]:
-    """
-    Loads songs from a CSV file into a list of dictionaries.
-
-    Numeric columns are converted from strings to numbers so they can be used
-    in scoring math later:
-      - id, tempo_bpm            -> int
-      - energy, valence,
-        danceability, acousticness -> float
-    Text columns (title, artist, genre, mood) are left as strings.
-
-    Required by src/main.py
-    """
-    int_fields = {"id", "tempo_bpm"}
-    float_fields = {"energy", "valence", "danceability", "acousticness"}
+    try:
+        handle = open(path, newline="", encoding="utf-8")
+    except OSError as exc:
+        raise CatalogError(f"could not open song catalog {path}: {exc}") from exc
 
     songs: List[Dict] = []
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            song: Dict = {}
-            for key, value in row.items():
-                if key in int_fields:
-                    song[key] = int(value)
-                elif key in float_fields:
-                    song[key] = float(value)
-                else:
-                    song[key] = value
+    with handle:
+        reader = csv.DictReader(handle)
+        for row_no, row in enumerate(reader, start=2):  # line 1 is the header
+            missing = REQUIRED_FIELDS - set(row)
+            if missing:
+                log.warning("row %d missing columns %s, skipping", row_no, sorted(missing))
+                continue
+            try:
+                song: Dict = {}
+                for key, value in row.items():
+                    if key in INT_FIELDS:
+                        song[key] = int(value)
+                    elif key in FLOAT_FIELDS:
+                        song[key] = float(value)
+                    else:
+                        song[key] = value
+            except (TypeError, ValueError) as exc:
+                log.warning("row %d has a bad numeric value (%s), skipping", row_no, exc)
+                continue
             songs.append(song)
 
+    if not songs:
+        raise CatalogError(f"song catalog {path} contained no usable rows")
+
+    log.debug("loaded %d songs from %s", len(songs), path)
     return songs
+
+
+def load_song_objects(csv_path: str | None = None) -> List[Song]:
+    """Same as `load_songs`, but as `Song` dataclasses."""
+    return [Song(**row) for row in load_songs(csv_path)]
+
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     """
-    Scores a single song against user preferences (the Algorithm Recipe).
+    Score one song against a taste profile (the "Algorithm Recipe").
 
-    Point system (max 6.0):
-      - Genre match ......... +2.0  (all-or-nothing; genre-heavy by design)
-      - Mood match .......... +1.0  (all-or-nothing)
+    Point system (max 6.0, see src/config.py for the weights):
+      - Genre match ......... +2.0  all-or-nothing
+      - Mood match .......... +1.0  all-or-nothing
       - Energy closeness .... 0 -> +2.0  = 2.0 * (1 - |energy - target_energy|)
       - Acoustic preference . 0 -> +1.0  = acousticness (or 1 - acousticness)
 
-    Returns a tuple of (score, reasons) where `reasons` is a list of short
-    strings explaining which rules fired and how many points each awarded.
+    Returns (score, reasons) where `reasons` explains which rules fired.
     """
     score = 0.0
     reasons: List[str] = []
 
-    # --- Genre match ---
     if song.get("genre") == user_prefs.get("favorite_genre"):
         score += GENRE_WEIGHT
         reasons.append(f"genre match: {song['genre']} (+{GENRE_WEIGHT:.1f})")
 
-    # --- Mood match ---
     if song.get("mood") == user_prefs.get("favorite_mood"):
         score += MOOD_WEIGHT
         reasons.append(f"mood match: {song['mood']} (+{MOOD_WEIGHT:.1f})")
 
-    # --- Energy closeness (scaled 0 -> ENERGY_WEIGHT) ---
     target_energy = user_prefs.get("target_energy")
     if target_energy is not None:
-        closeness = 1.0 - abs(song["energy"] - target_energy)
+        closeness = 1.0 - abs(song["energy"] - float(target_energy))
         energy_points = ENERGY_WEIGHT * closeness
         score += energy_points
         reasons.append(
-            f"energy {song['energy']:.2f} vs target {target_energy:.2f} "
+            f"energy {song['energy']:.2f} vs target {float(target_energy):.2f} "
             f"(+{energy_points:.2f})"
         )
 
-    # --- Acoustic preference (0 -> ACOUSTIC_WEIGHT) ---
     if user_prefs.get("likes_acoustic"):
         acoustic_points = ACOUSTIC_WEIGHT * song["acousticness"]
         reasons.append(f"acoustic, user likes acoustic (+{acoustic_points:.2f})")
@@ -133,34 +163,77 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
 
     return score, reasons
 
-def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
+
+def recommend_songs(
+    user_prefs: Dict,
+    songs: List[Dict],
+    k: int = 5,
+) -> List[Tuple[Dict, float, str]]:
     """
-    Ranks every song and returns the top `k` recommendations.
+    Rank the whole catalog by rule score and return the top `k`.
 
-    Uses score_song() as the "judge" for each track, then sorts the whole
-    catalog from highest to lowest score. Ties are broken by energy closeness
-    so the order is deterministic.
-
-    Returns a list of (song_dict, score, explanation) tuples, where
-    `explanation` is the song's reasons joined into one readable string.
+    Ties break on energy closeness, then on song id, so the order is fully
+    deterministic — which the consistency check in `src.evaluation` relies on.
     """
     target_energy = user_prefs.get("target_energy")
 
-    # Score every song in the catalog.
-    scored = []
+    scored: List[Tuple[Dict, float, str]] = []
     for song in songs:
         score, reasons = score_song(user_prefs, song)
-        explanation = "; ".join(reasons)
-        scored.append((song, score, explanation))
+        scored.append((song, score, "; ".join(reasons)))
 
-    # Sort highest-to-lowest by score; tie-break on energy closeness.
-    def sort_key(item):
+    def sort_key(item: Tuple[Dict, float, str]):
         song, score, _ = item
         closeness = 0.0
         if target_energy is not None:
-            closeness = 1.0 - abs(song["energy"] - target_energy)
-        return (score, closeness)
+            closeness = 1.0 - abs(song["energy"] - float(target_energy))
+        return (-score, -closeness, song["id"])
 
-    scored.sort(key=sort_key, reverse=True)
-
+    scored.sort(key=sort_key)
     return scored[:k]
+
+
+class Recommender:
+    """Object-oriented face of the rule-based scorer."""
+
+    def __init__(self, songs: List[Song]):
+        self.songs = songs
+
+    @classmethod
+    def from_csv(cls, csv_path: str | None = None) -> "Recommender":
+        return cls(load_song_objects(csv_path))
+
+    def _as_dicts(self) -> List[Dict]:
+        return [s.to_dict() for s in self.songs]
+
+    def score(self, user: UserProfile, song: Song) -> float:
+        score, _ = score_song(user.to_dict(), song.to_dict())
+        return score
+
+    def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
+        """Top `k` songs by rule score, best first."""
+        ranked = recommend_songs(user.to_dict(), self._as_dicts(), k=k)
+        by_id = {s.id: s for s in self.songs}
+        return [by_id[row[0]["id"]] for row in ranked]
+
+    def explain_recommendation(self, user: UserProfile, song: Song) -> str:
+        """Human-readable breakdown of the points a song earned."""
+        score, reasons = score_song(user.to_dict(), song.to_dict())
+        return (
+            f"{song.title} by {song.artist} scored {score:.2f}/{MAX_RULE_SCORE:.2f} - "
+            + "; ".join(reasons)
+        )
+
+
+def catalog_vocabulary(songs: List[Dict]) -> Tuple[List[str], List[str]]:
+    """Distinct genres and moods present in the catalog, sorted."""
+    genres = sorted({s["genre"] for s in songs})
+    moods = sorted({s["mood"] for s in songs})
+    return genres, moods
+
+
+def find_song(songs: List[Dict], song_id: int) -> Optional[Dict]:
+    for song in songs:
+        if song["id"] == song_id:
+            return song
+    return None
