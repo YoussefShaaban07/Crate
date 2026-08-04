@@ -1,3 +1,2 @@
-pandas
-pytest
-streamlit
+anthropic>=0.69
+pytest>=8.0
