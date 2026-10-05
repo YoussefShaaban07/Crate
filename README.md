@@ -1,4 +1,4 @@
-# 🎵 VibeScope 2.0
+# VibeScope — Explainable Music Recommendations
 
 **A retrieval-augmented music recommender that explains itself — and a test harness that proves it works.**
 
@@ -22,6 +22,15 @@ python -m src.main -q "I need something calm and instrumental for a long study s
 | **Eval** | 8 gated metrics, all passing (`python -m src.evaluation`) |
 
 ---
+
+## Explore the project
+
+- [Quick start](#quick-start)
+- [Architecture overview](#architecture-overview)
+- [Sample interactions](#sample-interactions)
+- [Design decisions and trade-offs](#design-decisions-and-trade-offs)
+- [Testing summary](#testing-summary)
+- [Model card](model_card.md) · [Execution evidence](assets/execution_evidence.md) · [AI tooling disclosure](ai_interactions.md)
 
 ## The original project (Modules 1–3)
 
@@ -56,8 +65,8 @@ generation stage, and `python -m src.main --profiles` runs it standalone as a ba
 ### 1. Install
 
 ```bash
-git clone <this-repo>
-cd applied-ai-system-final
+git clone https://github.com/YoussefShaaban07/applied-ai-system-project.git
+cd applied-ai-system-project
 
 python -m venv .venv
 .venv\Scripts\activate          # Windows
