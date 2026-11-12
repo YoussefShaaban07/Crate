@@ -1,4 +1,4 @@
-%% VibeScope 2.0 - retrieval-augmented music recommender
+%% Crate 2.0 - retrieval-augmented music recommender
 %% System architecture: components, data flow, and verification points.
 %% Render at https://mermaid.live, or with the Mermaid VS Code extension.
 %%
@@ -57,7 +57,7 @@ flowchart TD
         H2(["HUMAN reads the failed metric and the log,<br/>then fixes the root cause - not the threshold"])
     end
 
-    LOG[("logs/vibescope.log<br/>every retrieval, model call, retry,<br/>guardrail rejection and fallback")]
+    LOG[("logs/crate.log<br/>every retrieval, model call, retry,<br/>guardrail rejection and fallback")]
 
     %% ================= DATA FLOW =================
     Q --> R

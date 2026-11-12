@@ -1,5 +1,5 @@
 {
-  "description": "Golden cases for the VibeScope reliability harness. `gold_docs` are the knowledge-base documents a correct retrieval should surface. `gold_profile` fields may be null to skip scoring that field (used for deliberately ambiguous cases). `acceptable_top1` may be null when no single answer is defensible.",
+  "description": "Golden cases for the Crate reliability harness. `gold_docs` are the knowledge-base documents a correct retrieval should surface. `gold_profile` fields may be null to skip scoring that field (used for deliberately ambiguous cases). `acceptable_top1` may be null when no single answer is defensible.",
   "cases": [
     {
       "id": "study-instrumental",

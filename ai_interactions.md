@@ -1,6 +1,6 @@
 # AI Interactions Log
 
-Documenting how AI tooling was used to build VibeScope 2.0, and what I had to verify or
+Documenting how AI tooling was used to build Crate 2.0, and what I had to verify or
 correct myself.
 
 ---
@@ -11,7 +11,7 @@ correct myself.
 
 **What task did I give the agent?**
 
-Take VibeScope 1.0 — a rule-based scorer over an 18-song CSV with no AI in it at all — and
+Take Crate 1.0 — a rule-based scorer over an 18-song CSV with no AI in it at all — and
 turn it into a system meeting the advanced-feature requirement. I chose **RAG + a
 reliability/testing system**, with the constraint that the whole thing must still run and
 pass tests for someone with no Anthropic API key.

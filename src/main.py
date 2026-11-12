@@ -1,5 +1,5 @@
 """
-Command-line entry point for VibeScope.
+Command-line entry point for Crate.
 
     python -m src.main                          # demo: five natural-language requests
     python -m src.main -q "calm music to study to"
@@ -81,7 +81,7 @@ def run_profile_stress_test(k: int = 5) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m src.main",
-        description="VibeScope: a retrieval-augmented music recommender.",
+        description="Crate: a retrieval-augmented music recommender.",
     )
     parser.add_argument(
         "-q", "--query",
@@ -115,7 +115,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if not args.offline and not api_key_present():
         print(
-            "Note: ANTHROPIC_API_KEY is not set, so VibeScope is running in offline "
+            "Note: ANTHROPIC_API_KEY is not set, so Crate is running in offline "
             "mode.\n      Retrieval, scoring, guardrails and evaluation all still run; "
             "the two\n      Claude calls use deterministic stand-in logic. Set the key "
             "to enable them.\n",

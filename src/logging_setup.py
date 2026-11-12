@@ -21,7 +21,7 @@ def setup_logging(verbose: bool = False) -> logging.Logger:
     """Configure root logging once and return the application logger."""
     global _CONFIGURED
 
-    logger = logging.getLogger("vibescope")
+    logger = logging.getLogger("crate")
 
     if _CONFIGURED:
         return logger
