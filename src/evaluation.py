@@ -325,7 +325,7 @@ def render_report(
 
     lines: List[str] = []
     lines.append("=" * 72)
-    lines.append(f"VibeScope reliability report  (mode={mode}, {elapsed:.1f}s)")
+    lines.append(f"Crate reliability report  (mode={mode}, {elapsed:.1f}s)")
     lines.append("=" * 72)
 
     lines.append("")
@@ -420,7 +420,7 @@ def run_evaluation(
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run the VibeScope reliability / evaluation harness."
+        description="Run the Crate reliability / evaluation harness."
     )
     parser.add_argument(
         "--online",

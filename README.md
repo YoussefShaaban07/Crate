@@ -1,8 +1,10 @@
-# VibeScope — Explainable Music Recommendations
+# Crate — Explainable Music Recommendations
+
+*(Formerly VibeScope.)*
 
 **A retrieval-augmented music recommender that explains itself — and a test harness that proves it works.**
 
-Ask for music in plain English. VibeScope searches a knowledge base before answering, ranks
+Ask for music in plain English. Crate searches a knowledge base before answering, ranks
 songs using what it finds, and cites the specific documents behind every recommendation.
 An eight-metric evaluation harness gates every change, and the whole system runs with or
 without an API key.
@@ -339,7 +341,7 @@ Four independent reliability mechanisms, at three cadences.
 |---|---|---|
 | **Automated tests** — 72, no API key needed | Per change | `tests/` |
 | **Confidence scoring** — every pick rates itself 0–1 from three observable signals | Per request | `src/pipeline.py` |
-| **Logging and error handling** — every call, retry, rejection and fallback recorded | Per request | `src/logging_setup.py` → `logs/vibescope.log` |
+| **Logging and error handling** — every call, retry, rejection and fallback recorded | Per request | `src/logging_setup.py` → `logs/crate.log` |
 | **Human evaluation** — 22 inputs reviewed against stated criteria | Per release | [`eval/human_review.md`](eval/human_review.md) |
 
 ### Confidence scoring
@@ -460,7 +462,7 @@ report.
 │   ├── guardrails.py      Schema validation + citation/candidate enforcement
 │   ├── evaluation.py      Reliability harness — 8 gated metrics
 │   ├── config.py          Every tunable weight, threshold and model setting
-│   └── logging_setup.py   Structured logging to logs/vibescope.log
+│   └── logging_setup.py   Structured logging to logs/crate.log
 ├── data/
 │   ├── songs.csv          18-song catalog
 │   └── knowledge/notes.jsonl   31-document knowledge base

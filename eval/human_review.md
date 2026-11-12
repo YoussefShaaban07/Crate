@@ -1,6 +1,6 @@
 # Human Evaluation Log
 
-Manual review of VibeScope's output, recorded in a parseable format so the results can be
+Manual review of Crate's output, recorded in a parseable format so the results can be
 read without running a demo.
 
 **Reviewer:** Youssef Shaaban (project author)

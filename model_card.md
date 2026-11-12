@@ -1,8 +1,8 @@
-# 🎧 Model Card: VibeScope 2.0
+# 🎧 Model Card: Crate 2.0
 
 ## 1. Model Name
 
-**VibeScope 2.0** — it scopes out songs that match your vibe, and shows you the evidence.
+**Crate 2.0** — it digs through the crate for songs that match your vibe, and shows you the evidence.
 
 Version 1.0 was a rule-based scorer over a CSV. Version 2.0 is a **retrieval-augmented
 system**: it searches a knowledge base before answering, uses Claude to interpret the

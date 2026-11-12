@@ -1,5 +1,5 @@
 """
-Central configuration for VibeScope.
+Central configuration for Crate.
 
 Every tunable lives here so experiments are a one-line change and so the
 evaluation harness can report exactly which settings produced a report.
@@ -19,7 +19,7 @@ KNOWLEDGE_JSONL = PROJECT_ROOT / "data" / "knowledge" / "notes.jsonl"
 EVAL_CASES = PROJECT_ROOT / "eval" / "cases.json"
 EVAL_REPORT = PROJECT_ROOT / "eval" / "report.json"
 LOG_DIR = PROJECT_ROOT / "logs"
-LOG_FILE = LOG_DIR / "vibescope.log"
+LOG_FILE = LOG_DIR / "crate.log"
 
 # --- Scoring weights (the rule-based first-pass "Algorithm Recipe") --------
 # score_song() in recommender.py reads these directly.
